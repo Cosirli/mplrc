@@ -11,6 +11,18 @@ const td = new util.TextDecoder()
 const map = new Map()  // map found music
 const lmap = new Map() // map found lyrics
 
+let LOGGING_ENABLED = false
+const args = process.argv.slice(2)
+if (args.includes('-DEBUG')) {
+  LOGGING_ENABLED = true
+}
+function log(...messages) {
+  if (LOGGING_ENABLED) {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${messages.join(' ')}`);
+  }
+}
+
 const currLyricsFile = process.env.HOME + "/.config/waybar/lyric.txt"
 const musicDir = process.env.HOME + "/media/Music"
 const lyricsDir = path.join(musicDir, ".lyrics")
@@ -28,12 +40,12 @@ async function main() {
       let text = td.decode(data)
       if (text.split("\n").length === 2) {
         fs.writeFile(currLyricsFile, "null")
-        console.log("Write to", currLyricsFile, "null")
+        log("Write to", currLyricsFile, "null")
         return
       }
       if (td.decode(data).includes("n/a")) {
         fs.writeFile(currLyricsFile, "null")
-        console.log("Write to", currLyricsFile, "null")
+        log("Write to", currLyricsFile, "null")
         return
       }
 
@@ -49,32 +61,32 @@ async function main() {
       if (!lrc) {
         lrc = await getCurrentLyrics(musicPath)
         for (let l of lrc) {
-          console.log("L", l)
+          log("Lyrics mapped:", l.time, l.text)
         }
         lmap.set(title, lrc)
       }
 
       if (compare(elapsed, lrc[0].time) === -1) {
         fs.writeFile(currLyricsFile, "「" + title + "」")
-        console.log("g Write to", currLyricsFile, "「" + title + "」")
+        log("g Write to", currLyricsFile, "「" + title + "」")
       } else if (compare(elapsed, lrc[lrc.length - 1].time) === 1) {
         fs.writeFile(currLyricsFile, lrc[lrc.length - 1].text + "󰝚 󰝚 󰝚 ")
-        console.log("G Write to", currLyricsFile, lrc[lrc.length - 1].text + "󰝚 󰝚 󰝚 ")
+        log("G Write to", currLyricsFile, lrc[lrc.length - 1].text + "󰝚 󰝚 󰝚 ")
       } else {
         for (let i = 0; i < lrc.length - 1; i++) {
           let j = i + 1;
-          console.log("i:", i)
+          // log("i:", i)
           if (compare(elapsed, lrc[i].time) !== -1 && compare(elapsed, lrc[j].time) !== 1) {
             if (compare(lrc[i].time, lrc[j].time) === 0) {
-              console.log("skip")
+              log("skip")
               continue
             }
             if (lrc[i].text.trim()) {
               fs.writeFile(currLyricsFile, lrc[i].text)
-              console.log("Write to", currLyricsFile, lrc[i].text)
+              log("Write to", currLyricsFile, lrc[i].text)
             } else {
               fs.writeFile(currLyricsFile, "󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 ")
-              console.log("Write to", currLyricsFile, "󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 ")
+              log("Write to", currLyricsFile, "󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 ")
             }
             break
           }
@@ -85,7 +97,7 @@ async function main() {
 
 
   function compare(t1, t2) {
-    console.log("compare")
+    // log("compare")
     let [t1x, t1y] = t1.split(":").map(x => parseInt(x))
     let [t2x, t2y] = t2.split(":").map(x => parseInt(x))
     if (t1x < t2x) return -1;
@@ -111,7 +123,7 @@ async function recurIndex(path) {
       const res = await mm.parseFile(path)
       const song_name = res.common.title.trim();
       map.set(song_name, path)
-      console.log("indexed song:", path)
+      log("indexed music:", path)
     } catch (error) {
 
     }
@@ -127,7 +139,7 @@ async function recurIndex(path) {
           const res = await mm.parseFile(item_path)
           const song_name = res.common.title.trim();
           map.set(song_name, item_path)
-          console.log("indexed song:", item_path)
+          log("indexed music:", item_path)
         } catch (error) {
 
         }
@@ -164,7 +176,7 @@ async function getCurrentLyrics(songPath, opts = {}) {
     .split(/\r?\n/)
     .map(generateTimeTextPair)
     .filter(x => x !== null);
-  console.log("pairsArray: ", pairsArray)
+  log("pairsArray:\n   ", pairsArray.map(JSON.stringify).join('\n    '))
   return pairsArray
 }
 
@@ -179,7 +191,6 @@ function generateTimeTextPair(line) {
     time: time,
     text: text
   }
-  console.log("pair: ", pair)
   return pair
 }
 
