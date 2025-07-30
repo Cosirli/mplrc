@@ -2,22 +2,18 @@
 
 `mplrc` is a minimalist Waybar module that displays synchronized lyrics for tracks played via MPD. It is simple, configurable and lightweight.
 
----
-
 ### Features
 
 * **Real-time lyrics**: Fetches and displays synchronized lyrics from specified directory.
 * **Configurable paths**: Easily adjust your music and lyrics directories.
 * **Debug support**: Enable verbose logging for troubleshooting.
 
----
 
 ### Requirements
 
    * [Node.js](https://nodejs.org/) (with `npm`)
    * [`mpc`](https://www.musicpd.org/clients/mpc/) (Music Player Client)
 
----
 
 ### Installation
 
@@ -30,7 +26,6 @@ sudo npm install -g
 
 This installs the `mplrc` tool globally.
 
----
 
 ### Configuration
 
@@ -74,29 +69,25 @@ Add to your compositor config:
   exec-once mplrc
   ```
 
----
 
 ### Debugging
 
   Enable debug logs by:
 
   ```bash
-  mplrc --debug
+  mplrc -DEBUG
   ```
 
----
 
 ### Contributing
 
 Contributions and feature requests are welcome! Feel free to open an issue or submit a pull request.
 
----
 
 ### Acknowledgements
 
 This project is inspired by [hyric](https://github.com/YUxiangLuo/hyric). Thanks for the original implementation and inspiration!
 
----
 
 ### License
 
