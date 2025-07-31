@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 // @author Cosirli
-
 import mm from "music-metadata"
 import fs from "node:fs/promises"
 import childProcess from "node:child_process"
 import path from "node:path"
 import util from "node:util"
 
-const td = new util.TextDecoder()
-const map = new Map()  // map found music
-const lmap = new Map() // map found lyrics
 
-let LOGGING_ENABLED = false
 const args = process.argv.slice(2)
-if (args.includes('-DEBUG')) {
-  LOGGING_ENABLED = true
-}
+
+const musicDir = args.find(arg =>
+  arg.startsWith('--mus='))?.split('=')[1] || process.env.HOME + "/Music"
+const lyricsDir = args.find(arg =>
+  arg.startsWith('--lrc='))?.split('=')[1] || path.join(musicDir, ".lyrics")
+const currLyricsFile = process.env.HOME + "/.config/waybar/lyric.txt"
+const LOGGING_ENABLED = args.includes('-DEBUG')
+
 function log(...messages) {
   if (LOGGING_ENABLED) {
     const timestamp = new Date().toISOString();
@@ -23,9 +23,9 @@ function log(...messages) {
   }
 }
 
-const currLyricsFile = process.env.HOME + "/.config/waybar/lyric.txt"
-const musicDir = process.env.HOME + "/media/Music"
-const lyricsDir = path.join(musicDir, ".lyrics")
+const td = new util.TextDecoder()
+const musicMap = new Map()  // map found music
+const lyricMap = new Map()  // map found lyrics
 
 childProcess.spawn('cp', ['mplrc.sh', process.env.HOME + '/.config/waybar/'])
 let writtenLyrics = ""
@@ -47,18 +47,18 @@ async function main() {
       let musicInfo = text.split("\n")[0]
       let elapsed = text.split("\n")[1].split("/")[1].split(" ")[3]
       let title = musicInfo.substring(musicInfo.indexOf("-") + 2, musicInfo.length).trim()
-      let musicPath = map.get(title)
+      let musicPath = musicMap.get(title)
       if (!musicPath) {
         await recurIndex(musicDir)
-        musicPath = map.get(title)
+        musicPath = musicMap.get(title)
       }
-      let lrc = lmap.get(title)
+      let lrc = lyricMap.get(title)
       if (!lrc) {
         lrc = await getCurrentLyrics(musicPath)
         for (let l of lrc) {
           log("Lyrics mapped:", l.time, l.text)
         }
-        lmap.set(title, lrc)
+        lyricMap.set(title, lrc)
       }
 
       let currLyrics = ""
@@ -115,7 +115,7 @@ async function recurIndex(path) {
     try {
       const res = await mm.parseFile(path)
       const title = res.common.title.trim();
-      map.set(title, path)
+      musicMap.set(title, path)
       log("indexed music:", title, "path:", path)
     } catch (error) {
 
@@ -131,7 +131,7 @@ async function recurIndex(path) {
         try {
           const res = await mm.parseFile(itemPath)
           const title = res.common.title.trim();
-          map.set(title, itemPath)
+          musicMap.set(title, itemPath)
           log("indexed music:", title, "path:", itemPath)
         } catch (error) {
 
@@ -186,4 +186,5 @@ function generateTimeTextPair(line) {
   }
   return pair
 }
+
 
