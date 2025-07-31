@@ -28,6 +28,7 @@ const musicDir = process.env.HOME + "/media/Music"
 const lyricsDir = path.join(musicDir, ".lyrics")
 
 childProcess.spawn('cp', ['mplrc.sh', process.env.HOME + '/.config/waybar/'])
+let writtenLyrics = ""
 main()
 
 
@@ -38,14 +39,8 @@ async function main() {
     const s = childProcess.spawn('mpc', ['status'])
     s.stdout.on('data', async (data) => {
       let text = td.decode(data)
-      if (text.split("\n").length === 2) {
-        fs.writeFile(currLyricsFile, "null")
-        log("Write to", currLyricsFile, "null")
-        return
-      }
-      if (td.decode(data).includes("n/a")) {
-        fs.writeFile(currLyricsFile, "null")
-        log("Write to", currLyricsFile, "null")
+      if (text.split("\n").length === 2 || td.decode(data).includes("n/a")) {
+        writtenLyrics = "null"
         return
       }
 
@@ -66,31 +61,29 @@ async function main() {
         lmap.set(title, lrc)
       }
 
+      let currLyrics = ""
       if (compare(elapsed, lrc[0].time) === -1) {
-        fs.writeFile(currLyricsFile, "「" + title + "」")
-        log("g Write to", currLyricsFile, "「" + title + "」")
+        currLyrics = "「" + title + "」"
       } else if (compare(elapsed, lrc[lrc.length - 1].time) === 1) {
-        fs.writeFile(currLyricsFile, lrc[lrc.length - 1].text + "󰝚 󰝚 󰝚 ")
-        log("G Write to", currLyricsFile, lrc[lrc.length - 1].text + "󰝚 󰝚 󰝚 ")
+        currLyrics = lrc[lrc.length - 1].text + "󰝚 󰝚 󰝚 "
       } else {
         for (let i = 0; i < lrc.length - 1; i++) {
           let j = i + 1;
-          // log("i:", i)
           if (compare(elapsed, lrc[i].time) !== -1 && compare(elapsed, lrc[j].time) !== 1) {
             if (compare(lrc[i].time, lrc[j].time) === 0) {
               log("skip")
               continue
             }
-            if (lrc[i].text.trim()) {
-              fs.writeFile(currLyricsFile, lrc[i].text)
-              log("Write to", currLyricsFile, lrc[i].text)
-            } else {
-              fs.writeFile(currLyricsFile, "󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 ")
-              log("Write to", currLyricsFile, "󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 ")
-            }
+            currLyrics = lrc[i].text.trim() ? lrc[i].text.trim() : "󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 "
             break
           }
         }
+      }
+
+      if (currLyrics !== writtenLyrics) {
+        fs.writeFile(currLyricsFile, currLyrics)
+        log("Write to", currLyricsFile, currLyrics)
+        writtenLyrics = currLyrics
       }
     })
   }, 500)
@@ -118,28 +111,28 @@ async function main() {
 
 async function recurIndex(path) {
   const s = await fs.stat(path)
-  if (!s.isDirectory()) {
+  if (s.isFile()) {
     try {
       const res = await mm.parseFile(path)
-      const song_name = res.common.title.trim();
-      map.set(song_name, path)
-      log("indexed music:", path)
+      const title = res.common.title.trim();
+      map.set(title, path)
+      log("indexed music:", title, "path:", path)
     } catch (error) {
 
     }
   } else {
     const items = await fs.readdir(path)
     for (const item of items) {
-      const item_path = path + "/" + item
-      const s = await fs.stat(item_path)
+      const itemPath = path + "/" + item
+      const s = await fs.stat(itemPath)
       if (s.isDirectory()) {
-        await recurIndex(item_path)
+        await recurIndex(itemPath)
       } else if (s.isFile()) {
         try {
-          const res = await mm.parseFile(item_path)
-          const song_name = res.common.title.trim();
-          map.set(song_name, item_path)
-          log("indexed music:", item_path)
+          const res = await mm.parseFile(itemPath)
+          const title = res.common.title.trim();
+          map.set(title, itemPath)
+          log("indexed music:", title, "path:", itemPath)
         } catch (error) {
 
         }
