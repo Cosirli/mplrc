@@ -5,7 +5,7 @@
 ### Features
 
 * **Real-time lyrics**: Fetches and displays synchronized lyrics from specified directory.
-* **Configurable paths**: Easily adjust your music and lyrics directories.
+* **Configurable paths**: Easily adjust your music and lyrics directories via command-line arguments.
 * **Debug support**: Enable verbose logging for troubleshooting.
 
 
@@ -29,14 +29,25 @@ This installs the `mplrc` tool globally.
 
 ### Configuration
 
-#### 1. Verify paths in `index.js`
 
-Make sure these match your setup:
+#### 1. **Customize Music and Lyrics Paths**
 
-```js
-const musicDir = process.env.HOME + "/media/Music"; // Your music folder
-const lyricsDir = path.join(musicDir, ".lyrics");  // Your lyrics folder
+`mplrc` allows you to specify custom paths for your music and lyrics directories. You can pass these as command-line arguments when running `mplrc`:
+
+* `--mus`: Set your custom music directory.
+* `--lrc`: Set your custom lyrics directory.
+
+##### Example:
+
+```bash
+mplrc --mus=/path/to/your/music --lrc=/path/to/your/lyrics
 ```
+
+If you don't specify the paths, the following defaults will be used:
+
+* **Music Directory**: `~/Music`
+* **Lyrics Directory**: `/path/to/your/music/.lyrics`
+
 
 #### 2. Waybar Module Setup
 
@@ -54,25 +65,27 @@ Add this to `~/.config/waybar/config`:
 ```
 
 
-#### 3. Autostart on Launch
+### Usage
 
-Add to your compositor config:
+Once configured, you can start using `mplrc`:
 
-* **Sway**:
+**Run `mplrc` from the terminal**:
+
+  You can run it with custom arguments for music and lyrics directories or use the defaults.
+
+**Autostart on Launch**
+
+  To have `mplrc` start automatically when you launch your compositor, add a autostart command in your compositor's config.  
+  Example for *sway*:
 
   ```bash
-  exec_always --no-startup-id mplrc
-  ```
-* **Hyprland**:
-
-  ```bash
-  exec-once mplrc
+  exec_always mplrc --mus=/home/Cosirli/media/Music
   ```
 
 
-### Debugging
+#### Debugging
 
-  Enable debug logs by:
+  If you're encountering issues, enable verbose logging to troubleshoot:
 
   ```bash
   mplrc -DEBUG
