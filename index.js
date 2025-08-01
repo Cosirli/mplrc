@@ -62,22 +62,27 @@ async function main() {
       }
 
       let currLyrics = ""
-      const len = lrc.length
-      if (compare(elapsed, lrc[0].time) === -1) {
-        currLyrics = " 󰝚 󰝚 󰝚 "
-      } else if (compare(elapsed, lrc[len - 1].time) === 1) {
-        const i = len - 1
-        currLyrics = lrc[i].text.trim() ? lrc[i].text.trim() : " 󰝚 󰝚 󰝚 "
+      if (lrc.length === 0) {
+        log("No lyrics available for", musicInfo);
+        currLyrics = "No Lyrics";
       } else {
-        for (let i = 0; i < lrc.length - 1; i++) {
-          let j = i + 1;
-          if (compare(elapsed, lrc[i].time) !== -1 && compare(elapsed, lrc[j].time) !== 1) {
-            if (compare(lrc[i].time, lrc[j].time) === 0) {
-              log("skip")
-              continue
+        const len = lrc.length
+        if (compare(elapsed, lrc[0].time) === -1) {
+          currLyrics = " 󰝚 󰝚 󰝚 "
+        } else if (compare(elapsed, lrc[len - 1].time) === 1) {
+          const i = len - 1
+          currLyrics = lrc[i].text.trim() ? lrc[i].text.trim() : " 󰝚 󰝚 󰝚 "
+        } else {
+          for (let i = 0; i < lrc.length - 1; i++) {
+            let j = i + 1;
+            if (compare(elapsed, lrc[i].time) !== -1 && compare(elapsed, lrc[j].time) !== 1) {
+              if (compare(lrc[i].time, lrc[j].time) === 0) {
+                log("skip")
+                continue
+              }
+              currLyrics = lrc[i].text.trim() ? lrc[i].text.trim() : " 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 "
+              break
             }
-            currLyrics = lrc[i].text.trim() ? lrc[i].text.trim() : " 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 "
-            break
           }
         }
       }
@@ -151,9 +156,11 @@ async function getCurrentLyrics(songPath, opts = {}) {
 
   let rawLyrics = ''
   try {
+    log("Lyrics file:", lrcPath)
     rawLyrics = await fs.readFile(lrcPath, 'utf-8')
   } catch {
     // file not found, fallback to metadata
+    log("Lyrics file not found, checking metadata...")
     const res = await mm.parseFile(songPath)
     const arr = res.common.lyrics || []
     if (arr.length == 0) {
@@ -166,7 +173,7 @@ async function getCurrentLyrics(songPath, opts = {}) {
   const pairsArray = rawLyrics
     .split(/\r?\n/)
     .map(generateTimeTextPair)
-    .filter(x => x !== null);
+    .filter(pair => pair !== null && pair.time);
   log("pairsArray:\n   ", pairsArray.map(JSON.stringify).join('\n    '))
   return pairsArray
 }
