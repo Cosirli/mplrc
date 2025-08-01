@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-echo " $(cat $HOME/.config/waybar/lyric.txt)"
+while true; do
+	echo " $(cat $HOME/.config/waybar/lyric.txt)"
+	sleep 0.5
+done
+

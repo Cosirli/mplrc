@@ -59,7 +59,6 @@ Add this to `~/.config/waybar/config`:
   "modules-center": ["custom/mplrc"],
   "custom/mplrc": {
     "exec": "/home/USER/.config/waybar/mplrc.sh",
-    "restart-interval": 1,
   }
 }
 ```
