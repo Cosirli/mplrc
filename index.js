@@ -36,7 +36,7 @@ async function main() {
   await recurIndex(musicDir)
 
   setInterval(() => {
-    const s = childProcess.spawn('mpc', ['status'])
+    const s = childProcess.spawn('mpc', ['-f', '%title% - %artist% - %album%', 'status'])
     s.stdout.on('data', async (data) => {
       let text = td.decode(data)
       if (text.split("\n").length === 2 || td.decode(data).includes("n/a")) {
@@ -44,28 +44,30 @@ async function main() {
         return
       }
 
-      let musicInfo = text.split("\n")[0]
-      let elapsed = text.split("\n")[1].split("/")[1].split(" ")[3]
-      let title = musicInfo.substring(musicInfo.indexOf("-") + 2, musicInfo.length).trim()
-      let musicPath = musicMap.get(title)
-      if (!musicPath) {
-        await recurIndex(musicDir)
-        musicPath = musicMap.get(title)
-      }
-      let lrc = lyricMap.get(title)
+      let musicInfo = text.split("\n")[0].trim()
+      let elapsed = text.split("\n")[1].match(/^.*\/\d+\s+(\d+:\d+).*$/)[1]
+      let lrc = lyricMap.get(musicInfo)
       if (!lrc) {
-        lrc = await getCurrentLyrics(musicPath)
+        let path = musicMap.get(musicInfo)
+        if (!path) {
+          await recurIndex(musicDir)
+          path = musicMap.get(musicInfo)
+        }
+        log("musicPath:", path)
+        lrc = await getCurrentLyrics(path)
         for (let l of lrc) {
           log("Lyrics mapped:", l.time, l.text)
         }
-        lyricMap.set(title, lrc)
+        lyricMap.set(musicInfo, lrc)
       }
 
       let currLyrics = ""
+      const len = lrc.length
       if (compare(elapsed, lrc[0].time) === -1) {
-        currLyrics = "「" + title + "」"
-      } else if (compare(elapsed, lrc[lrc.length - 1].time) === 1) {
-        currLyrics = lrc[lrc.length - 1].text + "󰝚 󰝚 󰝚 "
+        currLyrics = " 󰝚 󰝚 󰝚 "
+      } else if (compare(elapsed, lrc[len - 1].time) === 1) {
+        const i = len - 1
+        currLyrics = lrc[i].text.trim() ? lrc[i].text.trim() : " 󰝚 󰝚 󰝚 "
       } else {
         for (let i = 0; i < lrc.length - 1; i++) {
           let j = i + 1;
@@ -74,7 +76,7 @@ async function main() {
               log("skip")
               continue
             }
-            currLyrics = lrc[i].text.trim() ? lrc[i].text.trim() : "󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 "
+            currLyrics = lrc[i].text.trim() ? lrc[i].text.trim() : " 󰝚 󰝚 󰝚 󰝚 󰝚 󰝚 "
             break
           }
         }
@@ -108,38 +110,31 @@ async function main() {
 
 }
 
-
 async function recurIndex(path) {
   const s = await fs.stat(path)
-  if (s.isFile()) {
-    try {
-      const res = await mm.parseFile(path)
-      const title = res.common.title.trim();
-      musicMap.set(title, path)
-      log("indexed music:", title, "path:", path)
-    } catch (error) {
-
-    }
-  } else {
+  if (s.isDirectory()) {
     const items = await fs.readdir(path)
-    for (const item of items) {
+    for (let item of items) {
       const itemPath = path + "/" + item
-      const s = await fs.stat(itemPath)
-      if (s.isDirectory()) {
-        await recurIndex(itemPath)
-      } else if (s.isFile()) {
-        try {
-          const res = await mm.parseFile(itemPath)
-          const title = res.common.title.trim();
-          musicMap.set(title, itemPath)
-          log("indexed music:", title, "path:", itemPath)
-        } catch (error) {
-
-        }
-      }
+      await recurIndex(itemPath)
     }
+  } else if (s.isFile()) {
+    await indexMusicFile(path)
   }
+}
 
+async function indexMusicFile(path) {
+  try {
+    const res = await mm.parseFile(path)
+    const title = res.common.title.trim()
+    const artist = res.common.artist.trim()
+    const album = res.common.album.trim()
+    const musicInfo = [title, artist, album].map(s => s.trim()).join(" - ")
+    musicMap.set(musicInfo, path)
+    log("indexed music:", musicInfo, "path:", path)
+  } catch (error) {
+
+  }
 }
 
 
@@ -161,7 +156,10 @@ async function getCurrentLyrics(songPath, opts = {}) {
     // file not found, fallback to metadata
     const res = await mm.parseFile(songPath)
     const arr = res.common.lyrics || []
-    if (arr.length == 0) return []
+    if (arr.length == 0) {
+      log("No lyrics in metadata")
+      return []
+    }
     rawLyrics = arr[0]
   }
 
